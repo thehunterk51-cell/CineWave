@@ -244,7 +244,7 @@ public final class Tx3gMuxer {
         zeros(h, 12);                 // reserved
         byte[] handlerName = "CineWave subtitles".getBytes(StandardCharsets.ISO_8859_1);
         h.write(handlerName, 0, handlerName.length);
-        h.write(0, 0, 1);
+        h.write(0);
         byte[] hdlr = fullBox("hdlr", 0, 0, h.toByteArray());
 
         byte[] url = fullBox("url ", 0, 1, new byte[0]);
