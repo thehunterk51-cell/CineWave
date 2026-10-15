@@ -22,6 +22,7 @@ public class MainActivity extends Activity {
     private static final String UPDATE_URL="https://raw.githubusercontent.com/thehunterk51-cell/CineWave/main/version.json";
     private static final String RELEASES_URL="https://github.com/thehunterk51-cell/CineWave/releases/latest";
     private static final String PREFS="cinewave_settings", PREF_ADBLOCK="ad_block_enabled";
+    private static final int APP_VERSION_CODE = 3;
     private static final Set<String> AD_HOSTS=new HashSet<>(Arrays.asList(
         "doubleclick.net","googlesyndication.com","googleadservices.com","adservice.google.com",
         "adnxs.com","adsrvr.org","advertising.com","criteo.com","taboola.com","outbrain.com",
@@ -128,7 +129,7 @@ public class MainActivity extends Activity {
                 JSONObject json=new JSONObject(body.toString());int code=json.optInt("versionCode",0);
                 String name=json.optString("versionName","new version"),link=json.optString("apkUrl",RELEASES_URL);
                 runOnUiThread(()->{
-                    if(code>BuildConfig.VERSION_CODE)new AlertDialog.Builder(this).setTitle("Update available")
+                    if(code>APP_VERSION_CODE)new AlertDialog.Builder(this).setTitle("Update available")
                         .setMessage("CineWave "+name+" is available. Open the release page to download it?")
                         .setNegativeButton("Later",null).setPositiveButton("Open download",(d,w)->{
                             try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(link)));}
