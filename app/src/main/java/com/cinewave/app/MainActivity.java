@@ -27,7 +27,10 @@ public class MainActivity extends Activity {
         "doubleclick.net","googlesyndication.com","googleadservices.com","adservice.google.com",
         "adnxs.com","adsrvr.org","advertising.com","criteo.com","taboola.com","outbrain.com",
         "popads.net","popcash.net","propellerads.com","exoclick.com","trafficjunky.net",
-        "juicyads.com","adsterra.com","hilltopads.net"));
+        "juicyads.com","adsterra.com","hilltopads.net",
+        // Common gambling/affiliate destinations seen as unsolicited movie-site redirects.
+        "melbet.com","melbet.tn","melbet.net","1xbet.com","bet365.com","betwinner.com",
+        "mostbet.com","parimatch.com","stake.com","linebet.com","22bet.com","betano.com"));
     private LinearLayout root;
     private WebView webView;
     private Button adBlockButton;
@@ -99,7 +102,10 @@ public class MainActivity extends Activity {
         ws.setMediaPlaybackRequiresUserGesture(false);ws.setSupportMultipleWindows(false);ws.setJavaScriptCanOpenWindowsAutomatically(false);
         webView.setWebViewClient(new WebViewClient(){
             @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest req){
-                String scheme=req.getUrl().getScheme();return scheme!=null&&!(scheme.equals("http")||scheme.equals("https"));
+                String target=req.getUrl().toString();
+                if(adBlockEnabled && isBlocked(target)) return true;
+                String scheme=req.getUrl().getScheme();
+                return scheme!=null&&!(scheme.equals("http")||scheme.equals("https"));
             }
             @Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest req){
                 if(adBlockEnabled&&isBlocked(req.getUrl().toString()))return new WebResourceResponse("text/plain","UTF-8",new ByteArrayInputStream(new byte[0]));
