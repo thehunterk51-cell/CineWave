@@ -27,22 +27,25 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install "platform-tools"
+          sdkmanager --install "platforms;android-35"
+          sdkmanager --install "build-tools;35.0.0"
 
       - name: Install Gradle
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
           unzip -q gradle-8.9-bin.zip
 
-      - name: Find and extract project ZIP
+      - name: Extract project ZIP
+        shell: bash
         run: |
           ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
+
           if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: No project ZIP found in repository root."
+            echo "ERROR: Project ZIP not found in repository root."
             exit 1
           fi
 
@@ -53,13 +56,13 @@ jobs:
             -printf '%h\n' | head -n 1)
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: settings.gradle not found in ZIP."
+            echo "ERROR: settings.gradle not found."
             exit 1
           fi
 
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: Check project files
+      - name: Validate project
         run: |
           test -f "$PROJECT_DIR/settings.gradle"
           test -f "$PROJECT_DIR/app/build.gradle"
@@ -72,7 +75,7 @@ jobs:
             -p "$PROJECT_DIR" \
             assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: CineWave-APK
