@@ -111,6 +111,18 @@ public class MainActivity extends Activity {
                 if(adBlockEnabled&&isBlocked(req.getUrl().toString()))return new WebResourceResponse("text/plain","UTF-8",new ByteArrayInputStream(new byte[0]));
                 return super.shouldInterceptRequest(view,req);
             }
+            @Override public void onPageFinished(WebView view,String url) {
+                super.onPageFinished(view,url);
+                if(adBlockEnabled) {
+                    // Best-effort cosmetic filter for common floating/sticky ad overlays.
+                    String js = "(function(){try{" +
+                      "var css='[id*=\"ad-\" i],[id*=\"ads-\" i],[class*=\"ad-banner\" i],[class*=\"floating-ad\" i],[class*=\"sticky-ad\" i],[class*=\"popup-ad\" i],[class*=\"overlay-ad\" i],.adsbygoogle,.ad-container,.advertisement,.ad-overlay,.sticky-banner,.floating-banner{display:none!important;visibility:hidden!important;pointer-events:none!important;}' ;" +
+                      "var st=document.getElementById('cinewave-ad-filter');if(!st){st=document.createElement('style');st.id='cinewave-ad-filter';st.textContent=css;(document.head||document.documentElement).appendChild(st);}" +
+                      "var clean=function(){document.querySelectorAll('iframe,div,aside,section').forEach(function(e){var s=getComputedStyle(e),r=e.getBoundingClientRect(),t=((e.id||'')+' '+(e.className||'')+' '+(e.getAttribute('aria-label')||'')).toString().toLowerCase();if((s.position==='fixed'||s.position==='sticky')&&(r.width>120||r.height>60)&&(/ad|advert|banner|promo|sponsor|popup|overlay/.test(t))){e.style.setProperty('display','none','important');}});};clean();new MutationObserver(clean).observe(document.documentElement,{childList:true,subtree:true});" +
+                      "}catch(e){}})();";
+                    view.evaluateJavascript(js,null);
+                }
+            }
         });
         webView.setWebChromeClient(new WebChromeClient(){
             @Override public boolean onCreateWindow(WebView view,boolean dialog,boolean userGesture,android.os.Message resultMsg){
