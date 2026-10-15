@@ -114,8 +114,17 @@ public class MainActivity extends Activity {
         });
         webView.setWebChromeClient(new WebChromeClient(){
             @Override public boolean onCreateWindow(WebView view,boolean dialog,boolean userGesture,android.os.Message resultMsg){
-                // Do not allow unsolicited popup windows; keep navigation in the current WebView.
+                // Never create secondary WebViews for popup windows.
                 return false;
+            }
+            @Override public boolean onJsAlert(WebView view,String url,String message,JsResult result) {
+                result.cancel(); return true;
+            }
+            @Override public boolean onJsConfirm(WebView view,String url,String message,JsResult result) {
+                result.cancel(); return true;
+            }
+            @Override public boolean onJsPrompt(WebView view,String url,String message,String defaultValue,JsPromptResult result) {
+                result.cancel(); return true;
             }
         });
         root.addView(webView,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);webView.loadUrl(url);webView.requestFocus();
@@ -123,6 +132,9 @@ public class MainActivity extends Activity {
     private boolean isBlocked(String value){
         try{String host=new URI(value).getHost();if(host==null)return false;host=host.toLowerCase(Locale.ROOT);
             for(String domain:AD_HOSTS)if(host.equals(domain)||host.endsWith("."+domain))return true;
+            // Betting redirect brands may rotate their top-level domains.
+            String[] redirectBrands={"melbet","1xbet","bet365","betwinner","mostbet","parimatch","stake","linebet","22bet","betano"};
+            for(String brand:redirectBrands) if(host.equals(brand) || host.startsWith(brand+".") || host.contains("."+brand+".")) return true;
         }catch(Exception ignored){}return false;
     }
     private void checkForUpdate(boolean manual){
