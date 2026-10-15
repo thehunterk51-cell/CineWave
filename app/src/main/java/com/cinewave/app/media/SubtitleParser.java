@@ -39,7 +39,7 @@ public final class SubtitleParser {
         text = text.replace("\r\n", "\n").replace('\r', '\n');
 
         String[] lines = text.split("\n", -1);
-        long cursor = 0;
+        int cursor = 0;
 
         while (cursor < lines.length) {
             String line = lines[cursor];
@@ -177,7 +177,7 @@ public final class SubtitleParser {
         s = s.replaceAll("\\{\\[^}]*\\}", "");
 
         StringBuilder trimmed = new StringBuilder();
-        for (String line : s.split("\n", false)) {
+        for (String line : s.split("\n")) {
             String t = line.trim();
             if (t.isEmpty()) continue;
             if (trimmed.length() > 0) trimmed.append('\n');

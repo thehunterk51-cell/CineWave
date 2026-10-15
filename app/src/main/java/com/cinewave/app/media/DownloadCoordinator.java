@@ -215,8 +215,9 @@ public final class DownloadCoordinator {
                 });
             } catch (Exception e) {
                 cleanup(raw);
-                String message = e.getMessage();
-                if (message == null || message.trim().isEmpty()) message = "the download failed";
+                String reason = e.getMessage();
+                final String message = reason == null || reason.trim().isEmpty()
+                        ? "the download failed" : reason;
                 MAIN.post(() -> {
                     running = false;
                     ui.onFailed(message);
