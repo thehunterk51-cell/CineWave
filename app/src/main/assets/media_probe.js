@@ -49,6 +49,36 @@
     }
   }
 
+  /* A player that uses Media Source Extensions reports a blob: address. It
+     looks like a link but resolves to nothing outside the page, so handing it
+     to the downloader produces an empty file. These are counted so the app can
+     say something useful instead of offering a link that cannot work. */
+  function schemeOf(url) {
+    var m = /^([a-z][a-z0-9+.-]*):/i.exec(url || "");
+    return m ? m[1].toLowerCase() : "";
+  }
+
+  function isDownloadable(url) {
+    var s = schemeOf(url);
+    if (s === "http" || s === "https") {
+      /* An m3u8 is a playlist, not a file. */
+      return !/\.m3u8(\?|$)/i.test(url);
+    }
+    return false;
+  }
+
+  function noteStream(out, url, label, kind) {
+    if (!url) return;
+    if (isDownloadable(url)) {
+      out.streams.push({ url: url, label: label || "", kind: kind || "" });
+    } else {
+      out.undownloadable += 1;
+      if (!out.undownloadableKinds[schemeOf(url)]) {
+        out.undownloadableKinds[schemeOf(url)] = label || kind || schemeOf(url);
+      }
+    }
+  }
+
   function describe(doc, out) {
     var seenStream = out.streams.reduce(function (acc, item) {
       acc[item.url] = true;
@@ -66,26 +96,20 @@
       var current = abs(v.currentSrc || v.getAttribute("src"));
       if (current && !seenStream[current]) {
         seenStream[current] = true;
-        out.streams.push({
-          url: current,
-          label: textOf(v) || ("Stream " + (out.streams.length + 1)),
-          kind: "current"
-        });
+        noteStream(out, current, textOf(v) || ("Stream " + (out.streams.length + 1)), "current");
       }
 
-      var sources = v.querySelectorAll("source");
+var sources = v.querySelectorAll("source");
       for (var j = 0; j < sources.length; j++) {
         var src = abs(sources[j].getAttribute("src") ||
                       sources[j].getAttribute("data-src"));
         if (!src || seenStream[src]) continue;
         seenStream[src] = true;
-        out.streams.push({
-          url: src,
-          label: sources[j].getAttribute("label") ||
-                 sources[j].getAttribute("data-res") ||
-                 sources[j].getAttribute("title") || "Source " + (j + 1),
-          kind: "source"
-        });
+        noteStream(out, src,
+                   sources[j].getAttribute("label") ||
+                   sources[j].getAttribute("data-res") ||
+                   sources[j].getAttribute("title") || "Source " + (j + 1),
+                   "source");
       }
     }
 
@@ -137,7 +161,7 @@
   }
 
   var out = { page: location.href, title: (document.title || "").trim(),
-              streams: [], subs: [] };
+              streams: [], subs: [], undownloadable: 0, undownloadableKinds: {} };
   try { describe(document, out); } catch (e) { /* keep whatever was found */ }
 
   try {

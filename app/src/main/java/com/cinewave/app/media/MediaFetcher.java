@@ -42,6 +42,29 @@ public final class MediaFetcher {
     public static long download(String url, String referer, String userAgent, String cookie,
                                 File dest, Progress progress, Cancel cancel) throws IOException {
         File tmp = new File(dest.getPath() + ".part");
+
+        /* Hosts disagree about whether they want a Referer: some serve only to a
+         * page they recognise, others treat any Referer as suspicious. Trying the
+         * second shape costs one extra request and rescues those that do. */
+        IOException last = null;
+        boolean hasReferer = referer != null && !referer.isEmpty();
+        String[] referers = hasReferer ? new String[]{ referer, null } : new String[]{ null };
+        for (String attempt : referers) {
+            if (cancel != null && cancel.isCancelled()) throw new Cancelled();
+            try {
+                return fetchTo(url, attempt, userAgent, cookie, tmp, dest, progress, cancel);
+            } catch (IOException e) {
+                if (e instanceof Cancelled) throw e;
+                last = e;
+            }
+        }
+        tmp.delete();
+        throw last == null ? new IOException("the download failed") : last;
+    }
+
+    private static long fetchTo(String url, String referer, String userAgent, String cookie,
+                                File tmp, File target, Progress progress, Cancel cancel)
+            throws IOException {
         long total = -1;
         long done = 0;
 
@@ -71,6 +94,9 @@ public final class MediaFetcher {
             }
             out.flush();
             out.getFD().sync();
+        } catch (IOException e) {
+            tmp.delete();
+            throw e;
         } finally {
             closeQuietly(in);
             closeQuietly(out);
@@ -81,11 +107,11 @@ public final class MediaFetcher {
             tmp.delete();
             throw new IOException("the server sent an empty file");
         }
-        if (dest.exists() && !dest.delete()) {
+        if (target.exists() && !target.delete()) {
             tmp.delete();
             throw new IOException("cannot replace the existing file");
         }
-        if (!tmp.renameTo(dest)) {
+        if (!tmp.renameTo(target)) {
             tmp.delete();
             throw new IOException("cannot move the download into place");
         }

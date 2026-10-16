@@ -221,6 +221,14 @@
     } catch (e) { /* ignore */ }
   }
 
+  /* True when a box sits hard against an edge of the viewport. */
+  function hugsEdge(r, vw, vh) {
+    var tol = Math.max(12, Math.min(vw, vh) * 0.03);
+    return r.top <= tol || r.left <= tol ||
+           (vw - (r.left + r.width)) <= tol ||
+           (vh - (r.top + r.height)) <= tol;
+  }
+
   function inspectLayer(el, vw, vh, depth) {
     if (!el || el.nodeType !== 1) return;
     var tag = el.tagName;
@@ -250,7 +258,7 @@
     /* A blank, full-page, very high z-index layer sitting on top of the
      * content: an overlay-ad backdrop or a click hijacker. It must really be
      * empty - no picture, no control, almost no text - before it is dropped. */
-    if (fixed && z >= 1000 && vw > 0 && vh > 0 &&
+    if (fixed && z >= 800 && vw > 0 && vh > 0 &&
         r.width >= vw * 0.75 && r.height >= vh * 0.4 &&
         !holdsPlayback(el) && !el.querySelector("img,picture,svg")) {
       var text = "";
@@ -261,7 +269,24 @@
       }
     }
 
-    if (depth < 1 && el.children) {
+    /* A floating banner clinging to an edge of the screen: short and wide, or
+     * tall and narrow, sitting well above the page. Kept apart from the rule
+     * above because a banner almost always carries a picture, and kept narrow
+     * on purpose - it must hug an edge, float high above the content and hold
+     * no video - so that a site header or a player is never caught. */
+    if (fixed && z >= 500 && vw > 0 && vh > 0 && !holdsPlayback(el) &&
+        el.tagName !== "BODY" && hugsEdge(r, vw, vh)) {
+      var maxBand = Math.max(96, vh * 0.2);
+      var maxStrip = Math.max(96, vw * 0.2);
+      var banner = (r.width >= vw * 0.2 && r.height <= maxBand) ||
+                   (r.height >= vh * 0.2 && r.width <= maxStrip);
+      if (banner && el.tagName !== "NAV" && !el.querySelector("video,iframe")) {
+        remove(el);
+        return;
+      }
+    }
+
+    if (depth < 2 && el.children) {
       for (var i = 0; i < el.children.length; i++) {
         inspectLayer(el.children[i], vw, vh, depth + 1);
       }

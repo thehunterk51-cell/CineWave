@@ -13,6 +13,8 @@ public final class MediaInfo {
 
     public String pageUrl = "";
     public String title = "";
+    /** Addresses the player holds that cannot be fetched from outside the page. */
+    public int undownloadable;
     public final List<Stream> streams = new ArrayList<>();
     public final List<Sub> subs = new ArrayList<>();
 
@@ -50,6 +52,7 @@ public final class MediaInfo {
         JSONObject root = new JSONObject(json);
         info.pageUrl = root.optString("page", "");
         info.title = root.optString("title", "");
+        info.undownloadable = root.optInt("undownloadable", 0);
 
         JSONArray streams = root.optJSONArray("streams");
         if (streams != null) {

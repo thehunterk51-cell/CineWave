@@ -968,12 +968,25 @@ public class MainActivity extends Activity {
             return;
         }
         if (info.streams.isEmpty()) {
-            Toast.makeText(this, "No video stream was found on this page. Start the film first, "
-                    + "then tap Save video again.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, noStreamMessage(info), Toast.LENGTH_LONG).show();
             offerManualLink();
             return;
         }
         chooseStream(info);
+    }
+
+    /**
+     * The common case is a player that streams through Media Source Extensions:
+     * the page holds a blob: address that means nothing outside it. Saying so
+     * is more use than claiming nothing was found.
+     */
+    private String noStreamMessage(MediaInfo info) {
+        if (info.undownloadable > 0) {
+            return "This player streams in a way that has no file behind it, so there is "
+                    + "nothing to download. Start the film first, or paste a direct .mp4 link.";
+        }
+        return "No video stream was found on this page. Start the film first, then tap "
+                + "Save video again.";
     }
 
     private void chooseStream(final MediaInfo info) {
