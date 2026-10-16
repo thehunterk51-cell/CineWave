@@ -156,4 +156,5 @@ The code in this repository is MIT licensed — see [`LICENSE`](LICENSE).
 One bundled file is not: `app/src/main/assets/adblock_hosts.txt` is derived
 from lists under the Creative Commons Attribution 3.0 Unported licence. The
 attribution those terms require is reproduced in the header of that file and
-summarised in [`LICENSE`](LICENSE). No third-party source code is bundled.
+set out in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). No third-party
+source code is bundled.
