@@ -64,6 +64,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
@@ -75,6 +76,15 @@ public class MainActivity extends Activity {
             "https://raw.githubusercontent.com/thehunterk51-cell/CineWave/main/version.json";
     private static final String RELEASES_URL =
             "https://github.com/thehunterk51-cell/CineWave/releases/latest";
+    /**
+     * Every release note carries a line {@code cinewave-version-code: N}. The
+     * app reads it so it only offers an update when a build newer than the one
+     * installed has actually been published. Without it, a user who is already
+     * up to date is still told to update, because {@code version.json} is
+     * bumped before the APK goes out.
+     */
+    private static final Pattern RELEASE_CODE =
+            Pattern.compile("cinewave-version-code:\\s*(\\d+)");
     /** Blocklist the app refreshes itself from. Same file that ships in the APK. */
     private static final String FILTERS_URL =
             "https://raw.githubusercontent.com/thehunterk51-cell/CineWave/main/app/src/main/assets/adblock_hosts.txt";
@@ -1524,30 +1534,28 @@ public class MainActivity extends Activity {
     private void checkForUpdate(boolean manual) {
         Thread t = new Thread(() -> {
             try {
-                HttpURLConnection c = (HttpURLConnection) new URL(UPDATE_URL).openConnection();
-                c.setConnectTimeout(5000);
-                c.setReadTimeout(5000);
-                c.setRequestProperty("Cache-Control", "no-cache");
-                BufferedReader r = new BufferedReader(
-                        new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8));
-                StringBuilder body = new StringBuilder();
-                String line;
-                while ((line = r.readLine()) != null) body.append(line);
-                r.close();
-                c.disconnect();
-                JSONObject json = new JSONObject(body.toString());
-                int code = json.optInt("versionCode", 0);
+                JSONObject json = new JSONObject(readUrl(UPDATE_URL));
+                int announced = json.optInt("versionCode", 0);
                 String name = json.optString("versionName", "new version");
                 String link = json.optString("apkUrl", RELEASES_URL);
+
+                /* What is published beats what is announced: the release page
+                 * is where the download will actually come from. */
+                int published = publishedReleaseCode();
+                final int code = published >= 0 ? published : announced;
+                final String remoteName = name;
+                final String download = link;
+
                 runOnUiThread(() -> {
                     if (code > APP_VERSION_CODE) {
                         new AlertDialog.Builder(this).setTitle("Update available")
-                                .setMessage("CineWave " + name
+                                .setMessage("CineWave " + remoteName
                                         + " is available. Open the release page to download it?")
                                 .setNegativeButton("Later", null)
                                 .setPositiveButton("Open download", (d, w) -> {
                                     try {
-                                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(link)));
+                                        startActivity(new Intent(Intent.ACTION_VIEW,
+                                                Uri.parse(download)));
                                     } catch (Exception e) {
                                         Toast.makeText(this, "Could not open download page.",
                                                 Toast.LENGTH_LONG).show();
@@ -1566,5 +1574,55 @@ public class MainActivity extends Activity {
         });
         t.setDaemon(true);
         t.start();
+    }
+
+    /**
+     * Reads the version code out of the latest release notes, or returns -1 if
+     * the page cannot be read or carries no marker.
+     */
+    private static int publishedReleaseCode() {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(RELEASES_URL).openConnection();
+            c.setConnectTimeout(6000);
+            c.setReadTimeout(8000);
+            c.setInstanceFollowRedirects(true);
+            c.setRequestProperty("User-Agent", "CineWave/" + APP_VERSION_CODE);
+            BufferedReader r = new BufferedReader(
+                    new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8));
+            StringBuilder body = new StringBuilder();
+            String line;
+            int read = 0;
+            while ((line = r.readLine()) != null && read < 4000) {
+                body.append(line).append('\n');
+                read++;
+            }
+            r.close();
+            Matcher m = RELEASE_CODE.matcher(body);
+            return m.find() ? Integer.parseInt(m.group(1)) : -1;
+        } catch (Exception e) {
+            return -1;
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    /** Fetches a short text document, used for version.json. */
+    private static String readUrl(String url) throws IOException {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        try {
+            c.setConnectTimeout(5000);
+            c.setReadTimeout(5000);
+            c.setRequestProperty("Cache-Control", "no-cache");
+            StringBuilder body = new StringBuilder();
+            try (BufferedReader r = new BufferedReader(
+                    new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = r.readLine()) != null) body.append(line);
+            }
+            return body.toString();
+        } finally {
+            c.disconnect();
+        }
     }
 }

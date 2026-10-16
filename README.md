@@ -149,6 +149,33 @@ Or open Actions and run **Build CineWave APK**, then download the
 [release](https://github.com/thehunterk51-cell/CineWave/releases/latest) is the
 durable place to download from.
 
+## Publishing a release
+
+CI artifacts expire after a week or two, so ship a release as well. The order
+matters, because the app decides whether to offer an update from two different
+places:
+
+1. Bump `versionCode` and `versionName` in `app/build.gradle` **and**
+   `version.json`.
+2. Push. The build produces `app-debug.apk`; download the artifact.
+3. Create the release from `main`, upload the APK, and put this line near the
+   top of the release notes:
+
+   ```
+   cinewave-version-code: 5
+   ```
+
+   Use the same number as `versionCode`.
+
+**Why step 3 matters.** `version.json` is bumped before the APK exists, so a
+user who is already up to date would otherwise be told to update, and tapping
+through would land them on a release page listing versions they already have.
+The app reads the marker from the release page and trusts the *published* build
+over the *announced* one, so the prompt only appears when there is genuinely
+something newer. If the marker is missing it falls back to `version.json`.
+
+Keep the marker on one line: the app matches it against the rendered page.
+
 ## Licence
 
 The code in this repository is MIT licensed — see [`LICENSE`](LICENSE).
