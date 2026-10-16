@@ -126,6 +126,97 @@ public final class MediaSaver {
         return new File(folder, stem + " (" + System.currentTimeMillis() + ")" + ext);
     }
 
+    /**
+     * Works out what a downloaded file really is from its first bytes.
+     *
+     * <p>MediaStore refuses an entry whose MIME type it does not recognise, so
+     * the extension has to be right or the save fails at the very last step.
+     * Guessing from the temporary name is not enough: the name comes from a
+     * pasted link or a page title and usually carries no extension at all.
+     *
+     * @return "mp4", "webm", "mkv", "ogv", or null when nothing matched
+     */
+    public static String sniffExtension(File f) {
+        if (f == null || !f.isFile() || f.length() < 12) return null;
+        InputStream in = null;
+        try {
+            byte[] head = new byte[64];
+            int n = 0;
+            in = new FileInputStream(f);
+            int read;
+            while (n < head.length
+                    && (read = in.read(head, n, head.length - n)) > 0) {
+                n += read;
+            }
+            if (n < 12) return null;
+
+            if (head[4] == 'f' && head[5] == 't' && head[6] == 'y' && head[7] == 'p') {
+                return "mp4";
+            }
+            if ((head[0] & 0xFF) == 0x1A && (head[1] & 0xFF) == 0x45 &&
+                    (head[2] & 0xFF) == 0xDF && (head[3] & 0xFF) == 0xA3) {
+                // Matroska and WebM share a signature; the doc type tells them apart.
+                for (int i = 0; i + 4 <= n; i++) {
+                    if (head[i] == 'w' && head[i + 1] == 'e' && head[i + 2] == 'b'
+                            && head[i + 3] == 'm') {
+                        return "webm";
+                    }
+                }
+                return "mkv";
+            }
+            if (head[0] == 'O' && head[1] == 'g' && head[2] == 'g' && head[3] == 'S') {
+                return "ogv";
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            closeQuietly(in);
+        }
+    }
+
+    /** The extension carried by a URL's path, if it looks like one we know. */
+    public static String extensionFromUrl(String url) {
+        if (url == null) return null;
+        int cut = url.length();
+        for (int i = 0; i < url.length(); i++) {
+            char c = url.charAt(i);
+            if (c == '?' || c == '#') {
+                cut = i;
+                break;
+            }
+        }
+        String path = url.substring(0, cut);
+        int dot = path.lastIndexOf('.');
+        int slash = path.lastIndexOf('/');
+        if (dot < 0 || dot < slash || dot == path.length() - 1) return null;
+        String ext = path.substring(dot + 1).toLowerCase(java.util.Locale.ROOT);
+        return mimeFor(ext) == null ? null : ext;
+    }
+
+    public static String mimeFor(String ext) {
+        if (ext == null) return null;
+        switch (ext.toLowerCase(java.util.Locale.ROOT)) {
+            case "mp4":
+            case "m4v":
+            case "mov":
+                return "video/mp4";
+            case "webm":
+                return "video/webm";
+            case "mkv":
+                return "video/x-matroska";
+            case "ogv":
+            case "ogg":
+                return "video/ogg";
+            case "srt":
+                return "application/x-subrip";
+            case "vtt":
+                return "text/vtt";
+            default:
+                return null;
+        }
+    }
+
     public static void copy(File src, File dest) throws IOException {
         try (OutputStream out = new FileOutputStream(dest)) {
             stream(src, out);
@@ -139,5 +230,14 @@ public final class MediaSaver {
             while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
         }
         out.flush();
+    }
+
+    private static void closeQuietly(java.io.Closeable c) {
+        if (c == null) return;
+        try {
+            c.close();
+        } catch (IOException ignored) {
+            // nothing useful to do
+        }
     }
 }

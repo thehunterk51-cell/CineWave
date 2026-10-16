@@ -189,17 +189,37 @@ public final class DownloadCoordinator {
 
                 stage(ui, "Saving the video");
                 post(ui, -1);
-                result.videoName = finalVideo.getName();
-                String mime = finalVideo.getName().endsWith(".mp4") ? "video/mp4" : "video/*";
-                result.videoUri = publish(app, finalVideo, mime, result.videoName);
-                if (result.videoUri == null) {
-                    // The gallery turned it down, so the working copy stays put
-                    // and its path is shown to the user.
+
+                /* Name the file after what it really is. The working copy is
+                 * called "<name>.source" and carries no extension at all, which
+                 * MediaStore rejects as an unsupported MIME type. */
+                String ext = MediaSaver.sniffExtension(finalVideo);
+                if (ext == null) ext = MediaSaver.extensionFromUrl(request.videoUrl);
+                String mime = ext == null ? null : MediaSaver.mimeFor(ext);
+
+                if (mime == null) {
+                    notes.append("The file type could not be recognised, so it was not added "
+                            + "to the gallery.");
+                    result.videoName = finalVideo.getName();
                     result.videoUri = Uri.fromFile(finalVideo);
                     result.localPath = finalVideo.getAbsolutePath();
                 } else {
-                    if (finalVideo != raw) finalVideo.delete();
-                    raw.delete();
+                    /* Only the working copy needs renaming: a merged file is
+                     * already called "<name>.<lang>.mp4". */
+                    if (finalVideo == raw) {
+                        File named = new File(dir, stem + "." + ext);
+                        named.delete();
+                        if (finalVideo.renameTo(named)) finalVideo = named;
+                    }
+                    result.videoName = finalVideo.getName();
+                    result.videoUri = publish(app, finalVideo, mime, result.videoName);
+                    if (result.videoUri == null) {
+                        result.videoUri = Uri.fromFile(finalVideo);
+                        result.localPath = finalVideo.getAbsolutePath();
+                    } else {
+                        if (finalVideo != raw) finalVideo.delete();
+                        raw.delete();
+                    }
                 }
                 result.note = notes.toString();
 
