@@ -100,6 +100,16 @@ It merges the AdAway default list (CC BY 3.0), Peter Lowe's ad server list and a
 curated set, then rewrites `app/src/main/assets/adblock_hosts.txt`. Don't hand
 edit the asset — the next run overwrites it.
 
+The generated file carries the attribution that CC BY 3.0 requires, including
+the licence link, a copyright notice and a statement that the file is a
+modified version of the AdAway list:
+
+| Source | Terms |
+| --- | --- |
+| AdAway default blocklist | CC BY 3.0 — Copyright (c) AdAway and contributors, <https://creativecommons.org/licenses/by/3.0/> |
+| Peter Lowe's ad/tracker server list | Redistribution permitted, <https://pgl.yoyo.org/adservers/> |
+| CineWave curated additions | Project owned, MIT |
+
 The parser accepts almost any public list format, so you can also paste lines
 into the asset directly:
 
@@ -135,4 +145,15 @@ gradle assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Or open Actions and run **Build CineWave APK**, then download the
-`CineWave-APK` artifact.
+`CineWave-APK` artifact. Artifacts expire, so a published
+[release](https://github.com/thehunterk51-cell/CineWave/releases/latest) is the
+durable place to download from.
+
+## Licence
+
+The code in this repository is MIT licensed — see [`LICENSE`](LICENSE).
+
+One bundled file is not: `app/src/main/assets/adblock_hosts.txt` is derived
+from lists under the Creative Commons Attribution 3.0 Unported licence. The
+attribution those terms require is reproduced in the header of that file and
+summarised in [`LICENSE`](LICENSE). No third-party source code is bundled.

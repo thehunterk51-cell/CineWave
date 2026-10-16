@@ -1,1 +1,0 @@
-ChatGPT Codex connector write permission test.
